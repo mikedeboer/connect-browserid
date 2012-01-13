@@ -36,14 +36,29 @@ exports.authUser = function authUser(options){
     if (req.session.verifiedEmail) {
       req.user = req.session.verifiedEmail;
       res.local('user', req.user);
-      console.log("Cool we have " + req.user);
     } else {
-      console.log("Seeting user to null");
       res.local('user', null);
     }
-
     return next();
   };
+};
+/**
+ * TODO ... rename?
+ * Purpose - enforce login
+   middleware design...
+   try {
+     next();
+   } catch (x) {
+     //is this a no auth exception? if so redirect
+   }
+ */
+exports.enforceLogIn = function (req, resp) {
+  if (! req.user) {
+    // TODO should be powered by authUser options
+    resp.redirect('/?login-required=true');
+    return true;
+  }
+  return false;
 };
 
 function get_audience(req) {
@@ -64,8 +79,9 @@ function get_audience(req) {
  * A side effect is that this starts a user's session and subsequent
  * requests will have req.user set to the user's email address.
  */
-exports.auth = function(req, res){
-  function onVerifyResp(bidRes) {
+exports.auth = function (options) {
+return function(req, res) {
+    function onVerifyResp(bidRes) {
     var data = "";
     bidRes.setEncoding('utf8');
     bidRes.on('data', function (chunk) {
@@ -83,7 +99,6 @@ exports.auth = function(req, res){
       res.end();
     });
   };
-  console.info("auth called with assertion");
   if (req.method === 'POST') {
     var assertion = req.body.assertion;
 
@@ -105,7 +120,7 @@ exports.auth = function(req, res){
     request.end();
   }
 };
-
+};
 /**
  * We'll assume CSRF etc is handled orthoganally to this route?
  *

@@ -40,7 +40,7 @@ This middleware must come after session but before router middlewares.
 
     navigator.id.getVerifiedEmail(function(assertion) {
         if (assertion) {
-            $.post("/auth", assertion, function(res) {
+            $.post("/auth", {assertion: assertion}, function(res) {
                 if (res.success) alert("now you're logged in as: " + res.user);
                 else alert("log in failure: " + res.reason);                 
             });        

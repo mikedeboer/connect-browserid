@@ -41,9 +41,26 @@ exports.authUser = function authUser(options){
     } else {
       res.local('user', null);
     }
-
     return next();
   };
+};
+/**
+ * TODO ... rename?
+ * Purpose - enforce login
+   middleware design...
+   try {
+     next();
+   } catch (x) {
+     //is this a no auth exception? if so redirect
+   }
+ */
+exports.enforceLogIn = function (req, resp) {
+  if (! req.user) {
+    // TODO should be powered by authUser options
+    resp.redirect('/?login-required=true');
+    return true;
+  }
+  return false;
 };
 
 /**
@@ -111,7 +128,6 @@ exports.auth = function (options) {
       bidRes.on('end', function () {
         var verified = JSON.parse(data);
         res.contentType('application/json');
-
         if (verified.status == 'okay') {
           req.session.verifiedEmail = verified.email;
           module.exports.events.emit('login', verified.email, req, res);

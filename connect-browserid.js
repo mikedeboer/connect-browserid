@@ -26,7 +26,10 @@ exports.authUser = function authUser(options){
     audience = options.audience;
   }
   return function authUser(req, res, next) {
-    if (req.user) return next();
+    if (req.user) {
+      console.info('req.user exists, skipping authUser');
+      return next();
+    }
     /* Complecting authentication with a User object is
      * a bad idea. Just doing email for now. */
     req.user = null;
@@ -36,31 +39,15 @@ exports.authUser = function authUser(options){
     if (!req.session) return next(no_sess);
 
     if (req.session.verifiedEmail) {
+      console.info("Pulling verifed email out of the session");
       req.user = req.session.verifiedEmail;
       res.local('user', req.user);
     } else {
+      console.warn("No verfieid email in the session");
       res.local('user', null);
     }
     return next();
   };
-};
-/**
- * TODO ... rename?
- * Purpose - enforce login
-   middleware design...
-   try {
-     next();
-   } catch (x) {
-     //is this a no auth exception? if so redirect
-   }
- */
-exports.enforceLogIn = function (req, resp) {
-  if (! req.user) {
-    // TODO should be powered by authUser options
-    resp.redirect('/?login-required=true');
-    return true;
-  }
-  return false;
 };
 
 /**
@@ -81,6 +68,13 @@ exports.enforceLogIn = function (req, resp) {
  * };
  * 
  * TODO: this still feels ackward... maybe have it be a function that wraps a route or ...?
+ * Purpose - enforce login
+   middleware design...
+   try {
+     next();
+   } catch (x) {
+     //is this a no auth exception? if so redirect
+   }
  */
 exports.enforceLogIn = function enforceLogIn(req, res) {
   if (!req.session || !req.session.verifiedEmail ||
@@ -118,7 +112,7 @@ exports.auth = function (options) {
   if (!options.next) {
     options.next = '/';
   }
-  return  function(req, res){
+  return  function(req, res){    
     function onVerifyResp(bidRes) {
       var data = "";
       bidRes.setEncoding('utf8');
@@ -129,9 +123,12 @@ exports.auth = function (options) {
         var verified = JSON.parse(data);
         res.contentType('application/json');
         if (verified.status == 'okay') {
+          console.info('browserid auth successful, setting req.session.verifiedEmail');
           req.session.verifiedEmail = verified.email;
           module.exports.events.emit('login', verified.email, req, res);
+          console.info(verified);
         } else {
+          console.error('audience', get_audience(req));
           console.error(verified.reason);
           res.writeHead(403);
         }
@@ -147,6 +144,7 @@ exports.auth = function (options) {
         assertion: assertion,
         audience: get_audience(req)
       });
+      console.info('verifying with browserid');
       var request = https.request({
         host: 'browserid.org',
         path: '/verify',
@@ -177,15 +175,47 @@ exports.auth = function (options) {
 exports.logout = function (options) {
   // Is there a better name for functions that create routes?
   // like createLogout or whatever...
+  var finish;
   options = options || {};
   if (!options.next) {
     options.next = '/';
   }
-  return function(req, res){
-    req.session.destroy(function (err) {
-      if (err) console.error(err);
-      res.redirect(options.next);
-    });
-
+  finish = function (resp) {
+    resp.redirect(options.next);
   };
+  return function(req, resp){
+    // connect-session API
+    if (typeof req.session.destroy === 'function') {
+      req.session.destroy(function (err) {
+        if (err) console.error(err);
+        finish(resp);
+      });
+    // client-session API
+    } else if (typeof req.session.reset === 'function') {
+      req.session.reset();
+      finish(resp);
+    } else {
+      throw "Unsupported session backend";
+    }
+  };
+};
+
+/**
+ * Middleware for development environments which guarentees
+ * your using the right hostname. Avoid subtle bugs and 
+ * headdesking with:
+ *     var browserid = require('connect-browserid');
+ *     ...
+ * 
+ *     app.use(browserid.guarantee);
+ */
+exports.guarantee_audience = function (req, resp, next) {
+  if (audience != null) {
+    if (audience.indexOf(req.headers['host']) == -1) {
+      console.info("Wrong hostname [", req.headers['host'], "] expected [",
+                   audience, "] ... fixing");
+      return resp.redirect(audience + req.url);
+    }
+  }
+  next();
 };

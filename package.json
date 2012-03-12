@@ -8,7 +8,7 @@
     "type": "git",
     "url": "https://github.com/lloyd/connect-browserid.git"
   },
-  "main": "connect-browserid",
+  "main": "lib/connect-browserid",
   "engines": {
     "node": ">=0.4.7"
   },

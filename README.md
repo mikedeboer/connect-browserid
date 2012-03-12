@@ -24,16 +24,15 @@ that's crazy easy to use in the third.  It's magic.
 
     app.use(express.session);
     app.use(require('connect-browserid')({
-      secret: "yabba dabba do",
       audience: "https://example.com"
     }.authUser());
     app.use(app.router);
 
 This middleware must come after session but before router middlewares.
 
-### throughout your code, req.user is the authenticated user
+### throughout your code req.email is the authenticated user's verified email address
 
-    if (req.user) res.send('hi ' + req.user);
+    if (req.email) res.send('hi ' + req.email);
     else res.send('I don't know you.');
 
 ### post an assertion to `/auth` to authenticate
@@ -42,8 +41,9 @@ This middleware must come after session but before router middlewares.
         if (assertion) {
             $.post("/auth", {assertion: assertion}, function(res) {
                 if (res.success) alert("now you're logged in as: " + res.user);
-                else alert("log in failure: " + res.reason);                 
-            });        
+                else alert("log in failure: " + res.reason);
+            });
         }
-    });    
+    });
 
+See example directory for more details.

@@ -44,6 +44,7 @@ $('.browserid').click(function (event) {
 $('.browserid-logout').click(function (event) {
   event.preventDefault();
   $.post('/logout', {_csrf: csrf}, function (data, status, jqXHR) {
+    console.log('posted to /logout');
     window.location = '/';
   })
 });

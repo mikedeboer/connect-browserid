@@ -1,7 +1,15 @@
-var browserid = require('../../connect-browserid'),
+var browserid_init = require('../../connect-browserid').init,
     express = require('express');
 var app = express.createServer();
 
+var browserid = browserid_init({
+    //audience: 'http://127.0.0.1:3030',
+    audience: 'http://haskwhal:3030',
+    debug: true,
+    auth_next: '/',
+    logout_next: '/'
+});
+console.log('1');
 app.set('views', __dirname + '/views');
 app.use(express.cookieParser());
 app.use(express.session({ secret: "keyboard cat" }));
@@ -11,12 +19,16 @@ app.use(function (req, resp, next) {
     resp.local('csrf', req.session._csrf);
     next();
 });
-
-app.use(browserid.authUser({
-    debug: true,
-    audience: "http://127.0.0.1:3030"}));
-app.post('/auth', browserid.auth({next: '/'}));
-app.post('/logout', browserid.logout({next: '/'}));
+console.log('2');
+app.use(browserid.authUser);
+console.log('after auth');
+app.post('/auth', browserid.auth);
+// Optional - use events to de-couple your app
+browserid.events.on('login', function (email, req, resp) {
+  console.log('User', email, 'logged in');
+});
+console.log('after login');
+app.post('/logout', browserid.logout);
 
 app.configure('development', function(){
     // A common error when developing locally is hitting your server as
@@ -42,9 +54,11 @@ app.get('/sekrit', function (req, resp) {
     resp.render('sekrit.ejs', {user: user});
 });
 
-var getUserByEmail = function (email) {
-  // ... This would talk to your real backend
-  return {};
+var backend = {
+  getUserByEmail: function (email) {
+    // ... This would talk to your real backend
+    return {};
+  }
 };
 
 app.listen(3030);

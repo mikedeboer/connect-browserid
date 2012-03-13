@@ -22,10 +22,11 @@ that's crazy easy to use in the third.  It's magic.
 
 ### put the middleware in your server
 
-    app.use(express.session);
-    app.use(require('connect-browserid')({
+    var browserid = require('connect-browserid').init({
       audience: "https://example.com"
-    }.authUser());
+    });
+    app.use(express.session);
+    app.use(browserid.authUser);
     app.use(app.router);
 
 This middleware must come after session but before router middlewares.
@@ -34,6 +35,8 @@ This middleware must come after session but before router middlewares.
 
     if (req.email) res.send('hi ' + req.email);
     else res.send('I don't know you.');
+
+    app.post('/auth', browserid.auth);
 
 ### post an assertion to `/auth` to authenticate
 

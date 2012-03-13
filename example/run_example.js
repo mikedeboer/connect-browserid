@@ -1,4 +1,4 @@
-var browserid = require('connect-browserid'),
+var browserid = require('../../connect-browserid'),
     express = require('express');
 var app = express.createServer();
 
@@ -18,6 +18,14 @@ app.use(browserid.authUser({
 app.post('/auth', browserid.auth({next: '/'}));
 app.post('/logout', browserid.logout({next: '/'}));
 
+app.configure('development', function(){
+    // A common error when developing locally is hitting your server as
+    // http://127.0.0.1:3000 but setting up your audience as
+    // http://dev.example.com:3000
+    app.use(browserid.guarantee_audience);
+    app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+});
+
 app.get('/', function (req, resp) {
     if (req.email) {
       resp.render('authenticated.ejs');
@@ -27,7 +35,7 @@ app.get('/', function (req, resp) {
 });
 
 app.get('/sekrit', function (req, resp) {
-    if (browserid.enforceLogIn(req, resp)) return;
+    if (browserid.enforceAuth(req, resp)) return;
     // Only logged in users get past this point
     var user = backend.getUserByEmail(req.email);
     // ...
@@ -40,4 +48,4 @@ var getUserByEmail = function (email) {
 };
 
 app.listen(3030);
-console.log("Express server listening on http://127.0.0.1:3030");
+console.log("Visit http://127.0.0.1:3030 to test connect-browserid");
